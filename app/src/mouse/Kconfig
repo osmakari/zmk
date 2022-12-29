@@ -9,6 +9,9 @@ config ZMK_MOUSE_TICK_DURATION
     int "Mouse tick duration in ms"
     default 8
 
+config ZMK_MOUSE_PRECISION_TOUCHPAD
+    bool "Report as precision touchpad"
+
 if ZMK_MOUSE
 
 choice ZMK_MOUSE_WORK_QUEUE
