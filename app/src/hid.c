@@ -39,21 +39,23 @@ const uint8_t PTPHQA_BLOB[] = {
 };
 
 // Report containing finger data
-struct zmk_ptp_report ptp_report = {
+struct zmk_hid_ptp_report ptp_report = {
     .report_id = ZMK_REPORT_ID_TOUCHPAD,
-    .fingers = {
-        { .confidence_tip = 0, .contact_id = 0, .x = 0, .y = 0 },
-        { .confidence_tip = 0, .contact_id = 0, .x = 0, .y = 0 },
-        { .confidence_tip = 0, .contact_id = 0, .x = 0, .y = 0 }
-    },
-    .scan_time = 0,
-    .contact_count = 0,
-    .buttons = 0
+    .body = {
+        .fingers = {
+            { .confidence_tip = 0, .contact_id = 0, .x = 0, .y = 0 },
+            { .confidence_tip = 0, .contact_id = 0, .x = 0, .y = 0 },
+            { .confidence_tip = 0, .contact_id = 0, .x = 0, .y = 0 }
+        },
+        .scan_time = 0,
+        .contact_count = 0,
+        .buttons = 0
+    }
 };
 
 // Feature report for configuration
 struct zmk_ptp_feature_configuration ptp_feature_configuration = {
-    .report_id = ZMK_REPORT_ID_FEATURE_CONFIGURATION,
+    .report_id = ZMK_REPORT_ID_FEATURE_PTP_CONFIGURATION,
     .input_mode = 0,
     .selective_reporting = 0
 };
@@ -391,8 +393,11 @@ void zmk_hid_mouse_scroll_update(int8_t x, int8_t y) {
 }
 void zmk_hid_mouse_clear() { memset(&mouse_report.body, 0, sizeof(mouse_report.body)); }
 
-void zmk_hid_touchpad_set () {
-    
+void zmk_hid_touchpad_set (struct zmk_ptp_finger fingers[CONFIG_ZMK_MOUSE_TOUCHPAD_MAX_FINGERS], uint16_t scan_time, uint8_t contact_count, uint8_t buttons) {
+    memcpy(ptp_report.body.fingers, fingers, sizeof(struct zmk_ptp_finger) * CONFIG_ZMK_MOUSE_TOUCHPAD_MAX_FINGERS);
+    ptp_report.body.scan_time = scan_time;
+    ptp_report.body.contact_count = contact_count;
+    ptp_report.body.buttons = buttons;
 }
 
 struct zmk_hid_keyboard_report *zmk_hid_get_keyboard_report() {
@@ -405,4 +410,8 @@ struct zmk_hid_consumer_report *zmk_hid_get_consumer_report() {
 
 struct zmk_hid_mouse_report *zmk_hid_get_mouse_report() {
     return &mouse_report;
+}
+
+struct zmk_hid_ptp_report *zmk_hid_get_ptp_report () {
+    return &ptp_report;
 }

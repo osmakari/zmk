@@ -12,6 +12,13 @@ config ZMK_MOUSE_TICK_DURATION
 config ZMK_MOUSE_PRECISION_TOUCHPAD
     bool "Report as precision touchpad"
 
+
+config ZMK_MOUSE_TOUCHPAD_MAX_FINGERS
+    int "Max fingers to report, 3-5"
+    range 3 5
+    default 3
+
+
 if ZMK_MOUSE
 
 choice ZMK_MOUSE_WORK_QUEUE

@@ -49,27 +49,52 @@ enum {
 };
 
 static struct hids_report input = {
-    .id = 0x01,
+    .id = ZMK_REPORT_ID_KEYBOARD,
     .type = HIDS_INPUT,
 };
 
 static struct hids_report consumer_input = {
-    .id = 0x02,
+    .id = ZMK_REPORT_ID_CONSUMER,
     .type = HIDS_INPUT,
 };
 
 static struct hids_report mouse_input = {
-    .id = 0x04,
+    .id = ZMK_REPORT_ID_MOUSE,
     .type = HIDS_INPUT,
 };
 
+static struct hids_report touchpad_report = {
+    .id = ZMK_REPORT_ID_TOUCHPAD,
+    .type = HIDS_INPUT,
+};
+
+static struct hids_report touchpad_capabilities = {
+    .id = ZMK_REPORT_ID_FEATURE_PTP_CAPABILITIES,
+    .type = HIDS_FEATURE,
+};
+
+static struct hids_report touchpad_capabilities = {
+    .id = ZMK_REPORT_ID_FEATURE_PTPHQA,
+    .type = HIDS_FEATURE,
+};
+
+static struct hids_report touchpad_config = {
+    .id = ZMK_REPORT_ID_FEATURE_PTP_CONFIGURATION,
+    .type = HIDS_FEATURE,
+};
+
+static struct hids_report touchpad_selective = {
+    .id = ZMK_REPORT_ID_FEATURE_PTP_SELECTIVE,
+    .type = HIDS_FEATURE,
+};
+
 static struct hids_report data_output = {
-    .id = 0x05,
+    .id = ZMK_REPORT_ID_CONTROL,
     .type = HIDS_OUTPUT,
 };
 
 static struct hids_report data_input = {
-    .id = 0x05,
+    .id = ZMK_REPORT_ID_CONTROL,
     .type = HIDS_INPUT,
 };
 
@@ -147,8 +172,8 @@ char _rxbuff[65];
 static ssize_t write_rx_buff (struct bt_conn *conn, const struct bt_gatt_attr *attr,
                                 const void *buf, uint16_t len, uint16_t offset, uint8_t flags) {
 
-    // Bluetooth does not contain the report ID (0x05), so we need to have it as the first byte for hidergod_parse
-    _rxbuff[0] = 0x05;
+    // Bluetooth does not contain the report ID (ZMK_REPORT_ID_CONTROL), so we need to have it as the first byte for hidergod_parse
+    _rxbuff[0] = ZMK_REPORT_ID_CONTROL;
     memcpy(_rxbuff + 1, buf, len);
     zmk_control_parse(_rxbuff, len + 1);
     return len;
@@ -160,7 +185,7 @@ static ssize_t read_rx_buff(struct bt_conn *conn, const struct bt_gatt_attr *att
     if(_zmk_control_input_buffer == NULL) {
         uint8_t buff[ZMK_CONTROL_REPORT_SIZE];
         memset(buff, 0, sizeof(buff));
-        buff[0] = 0x05;
+        buff[0] = ZMK_REPORT_ID_CONTROL;
         return bt_gatt_attr_read(conn, attr, buf, len, offset, _zmk_control_input_buffer, ZMK_CONTROL_REPORT_SIZE);
     }
     ssize_t l = bt_gatt_attr_read(conn, attr, buf, len, offset, _zmk_control_input_buffer, ZMK_CONTROL_REPORT_SIZE);
@@ -215,7 +240,9 @@ BT_GATT_SERVICE_DEFINE(
                        NULL, &data_input),
     
     BT_GATT_CHARACTERISTIC(BT_UUID_HIDS_CTRL_POINT, BT_GATT_CHRC_WRITE_WITHOUT_RESP,
-                           BT_GATT_PERM_WRITE, NULL, write_ctrl_point, &ctrl_point));
+                           BT_GATT_PERM_WRITE, NULL, write_ctrl_point, &ctrl_point)
+                           
+);
 
 struct bt_conn *destination_connection() {
     struct bt_conn *conn;

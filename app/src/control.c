@@ -94,7 +94,7 @@ int zmk_control_get_config (uint8_t *buffer, uint16_t len) {
     }
 
     struct zmk_control_msg_header *hdr = (struct zmk_control_msg_header *)_zmk_control_input_buffer;
-    hdr->report_id = 0x05;
+    hdr->report_id = ZMK_REPORT_ID_CONTROL;
     hdr->cmd = ZMK_CONTROL_CMD_GET_CONFIG;
     hdr->crc = 0;
     hdr->chunk_offset = 0;
@@ -158,8 +158,8 @@ int zmk_control_parse (uint8_t *buffer, size_t len) {
     if(data_buffer_len == 0) {
         // First chunk, copy header to memory
         memcpy(&data_header, buffer, sizeof(struct zmk_control_msg_header));
-        if(data_header.report_id != 0x05) {
-            // Report id must be 0x05
+        if(data_header.report_id != ZMK_REPORT_ID_CONTROL) {
+            // Report id must be ZMK_REPORT_ID_CONTROL
             return -3;
         }
         // Allocate buffer

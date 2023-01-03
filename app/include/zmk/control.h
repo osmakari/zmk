@@ -30,7 +30,7 @@ enum zmk_control_cmd_t {
 // Package header
 // TODO: Do the messages need header on every chunk? large overhead but safer transfer...
 struct __attribute__((packed)) zmk_control_msg_header {
-    // Report ID (should always be 0x05)
+    // Report ID (should always be ZMK_REPORT_ID_CONTROL)
     uint8_t report_id; // Not received for some reason?
     // Command (enum zmk_control_cmd_t)
     uint8_t cmd;

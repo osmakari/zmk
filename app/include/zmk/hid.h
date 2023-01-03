@@ -24,12 +24,13 @@
 
 #define ZMK_REPORT_ID_MOUSE         0x04
 
-#define ZMK_REPORT_ID_CONTROL       0x05
+#define ZMK_REPORT_ID_CONTROL       0xFF
 
-#define ZMK_REPORT_ID_TOUCHPAD      0x06
-#define ZMK_REPORT_ID_FEATURE_PTP_CAPABILITIES 0x07
-#define ZMK_REPORT_ID_FEATURE_PTPHQA 0x08
-#define ZMK_REPORT_ID_FEATURE_CONFIGURATION       0x09
+#define ZMK_REPORT_ID_TOUCHPAD                      0x05
+#define ZMK_REPORT_ID_FEATURE_PTP_CAPABILITIES      0x06
+#define ZMK_REPORT_ID_FEATURE_PTPHQA                0x07
+#define ZMK_REPORT_ID_FEATURE_PTP_CONFIGURATION     0x08
+#define ZMK_REPORT_ID_FEATURE_PTP_SELECTIVE         0x09
 
 
 static const uint8_t zmk_hid_report_desc[] = {
@@ -379,7 +380,7 @@ static const uint8_t zmk_hid_report_desc[] = {
         /* COLLECTION (Physical) */
         HID_COLLECTION(HID_COLLECTION_PHYSICAL),
             /* REPORT_ID (Feature, 0x0A) */
-            HID_REPORT_ID(0x0A),
+            HID_REPORT_ID(ZMK_REPORT_ID_FEATURE_PTP_SELECTIVE),
             /* USAGE (Surface switch) */
             HID_USAGE(HID_USAGE_DIGITIZERS_SURFACE_SWITCH),
             /* USAGE (Button switch) */
@@ -565,17 +566,20 @@ struct zmk_ptp_finger {
 } __packed;
 
 // Report containing finger data
-struct zmk_ptp_report {
+struct zmk_hid_ptp_report {
     // 0x06
     uint8_t report_id;
-    // Finger reporting
-    struct zmk_ptp_finger fingers[3];
-    // Scan time
-    uint16_t scan_time;
-    // Contact count
-    uint8_t contact_count;
-    // Buttons
-    uint8_t buttons;
+
+    struct {
+        // Finger reporting
+        struct zmk_ptp_finger fingers[CONFIG_ZMK_MOUSE_TOUCHPAD_MAX_FINGERS];
+        // Scan time
+        uint16_t scan_time;
+        // Contact count
+        uint8_t contact_count;
+        // Buttons
+        uint8_t buttons;
+    } __packed body;
 } __packed;
 
 // Feature report for configuration
@@ -643,3 +647,4 @@ void zmk_hid_mouse_clear();
 struct zmk_hid_keyboard_report *zmk_hid_get_keyboard_report();
 struct zmk_hid_consumer_report *zmk_hid_get_consumer_report();
 struct zmk_hid_mouse_report *zmk_hid_get_mouse_report();
+struct zmk_hid_ptp_report *zmk_hid_get_ptp_report ();
