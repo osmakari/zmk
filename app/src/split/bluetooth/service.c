@@ -106,6 +106,17 @@ static void split_svc_pos_state_ccc(const struct bt_gatt_attr *attr, uint16_t va
     LOG_DBG("value %d", value);
 }
 
+uint8_t _rxbuff[65];
+
+static ssize_t write_rx_buff (struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                                const void *buf, uint16_t len, uint16_t offset, uint8_t flags) {
+    _rxbuff[0] = 0x05;
+    memcpy(_rxbuff + 1, buf, len);
+    LOG_ERR("RECV DATA");
+    //zmk_control_parse(_rxbuff, len + 1);
+    return len;
+}
+
 BT_GATT_SERVICE_DEFINE(
     split_svc, BT_GATT_PRIMARY_SERVICE(BT_UUID_DECLARE_128(ZMK_SPLIT_BT_SERVICE_UUID)),
     BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_128(ZMK_SPLIT_BT_CHAR_POSITION_STATE_UUID),
@@ -123,6 +134,10 @@ BT_GATT_SERVICE_DEFINE(
                            split_svc_sensor_state, NULL, &sensor_event),
     BT_GATT_CCC(split_svc_sensor_state_ccc, BT_GATT_PERM_READ_ENCRYPT | BT_GATT_PERM_WRITE_ENCRYPT),
 #endif /* ZMK_KEYMAP_HAS_SENSORS */
+    // Generic data between the 2 devices
+    BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_128(ZMK_SPLIT_BT_GENERIC_DATA_UUID),
+                           BT_GATT_CHRC_WRITE_WITHOUT_RESP, BT_GATT_PERM_WRITE_ENCRYPT,
+                           NULL, write_rx_buff, &_rxbuff),
 );
 
 K_THREAD_STACK_DEFINE(service_q_stack, CONFIG_ZMK_SPLIT_BLE_PERIPHERAL_STACK_SIZE);
