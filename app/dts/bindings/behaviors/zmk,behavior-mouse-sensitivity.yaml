@@ -1,0 +1,12 @@
+# Copyright (c) 2020 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+description: Change mouse sensitivity
+
+compatible: "zmk,behavior-mouse-sensitivity"
+
+include: one_param.yaml
+
+properties:
+  delay-ms:
+    type: int

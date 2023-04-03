@@ -28,6 +28,13 @@
 			tap-ms = <50>;
             bindings = <&mwh SCROLL_UP>, <&mwh SCROLL_DOWN>;
         };
+        mouse_sensitivity: mouse_sensitivity {
+            compatible = "zmk,behavior-sensor-rotate";
+            label = "mouse_sensitivity";
+            #sensor-binding-cells = <0>;
+            tap-ms = <50>;
+            bindings = <&msens 8>, <&msens 248>;
+        };
     
     };
 
@@ -74,7 +81,7 @@
                                                                                                           	
 			>;
 
-			sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
+			sensor-bindings = <&mouse_sensitivity &inc_dec_kp PG_UP PG_DN>;
 
 			
 		};

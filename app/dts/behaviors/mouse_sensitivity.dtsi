@@ -1,0 +1,10 @@
+/ {
+	behaviors {
+		/omit-if-no-ref/ msens: behavior_mouse_sensitivity {
+			compatible = "zmk,behavior-mouse-sensitivity";
+			label = "MOUSE_SENSITIVITY";
+			#binding-cells = <1>;
+            delay-ms = <0>;
+		};
+	};
+};

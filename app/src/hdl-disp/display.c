@@ -43,23 +43,41 @@ struct {
     // View
     enum dsp_view view;
     // Battery percentage
-    int batt_percent;
+    uint8_t batt_percent;
     // Battery sprite
-    int batt_sprite;
+    uint8_t batt_sprite;
     // Charging
-    int charge;
+    uint8_t charge;
+    // RSSI
+    int8_t rssi;
 
-    // Displayed time and date strings
-    char conf_time_dsp[16];
-    char conf_date_dsp[16];
+    uint16_t sensitivity;
+    
+    // Time and date
+    uint8_t hasTime;
+    
+    uint8_t hours;
+    uint8_t minutes;
+
+    uint16_t year;
+    uint8_t month;
+    uint8_t day;
+    
+    // 0 = monday
+    uint8_t weekDay;
 
 } dsp_binds;
 
 // Refresh clock texts
 void conf_time_refresh () {
     if(conf_time.timestamp == 0) {
-        strcpy(dsp_binds.conf_time_dsp, "--:--");
-        strcpy(dsp_binds.conf_date_dsp, "XX/XX");
+        dsp_binds.hours = 0;
+        dsp_binds.minutes = 0;
+        dsp_binds.year = 0;
+        dsp_binds.month = 0;
+        dsp_binds.day = 0;
+        dsp_binds.weekDay = 0;
+        dsp_binds.hasTime = 0;
     }
     else {
         uint64_t nclock = k_uptime_get();
@@ -67,9 +85,13 @@ void conf_time_refresh () {
         time_t tmr = conf_time_timestamp;
 
         struct tm *_tm = localtime(&tmr);
-
-        sprintf(dsp_binds.conf_time_dsp, "%02i:%02i", _tm->tm_hour, _tm->tm_min);
-        sprintf(dsp_binds.conf_date_dsp, "%02i/%02i", _tm->tm_mday, _tm->tm_mon + 1);
+        dsp_binds.hours = _tm->tm_hour;
+        dsp_binds.minutes = _tm->tm_min;
+        dsp_binds.year = _tm->tm_year + 1900;
+        dsp_binds.month = _tm->tm_mon + 1;
+        dsp_binds.day = _tm->tm_mday;
+        dsp_binds.weekDay = _tm->tm_wday;
+        dsp_binds.hasTime = 1;
     }
 }
 
@@ -239,8 +261,21 @@ static void display_thread(void *arg, void *unused2, void *unused3) {
     HDL_SetBinding(&interface, "BATT_PERCENT",  2, &dsp_binds.batt_percent, HDL_TYPE_I8);
     HDL_SetBinding(&interface, "BATT_SPRITE",   3, &dsp_binds.batt_sprite, HDL_TYPE_I8);
     HDL_SetBinding(&interface, "CHRG",          4, &dsp_binds.charge, HDL_TYPE_BOOL);
-    HDL_SetBinding(&interface, "TIME",          5, &dsp_binds.conf_time_dsp, HDL_TYPE_STRING);
-    HDL_SetBinding(&interface, "DATE",          6, &dsp_binds.conf_date_dsp, HDL_TYPE_STRING);
+    HDL_SetBinding(&interface, "RSSI",          5, &dsp_binds.rssi, HDL_TYPE_I8);
+
+    HDL_SetBinding(&interface, "SENSITIVITY",   6, &dsp_binds.sensitivity, HDL_TYPE_I16);
+
+    // Time and date
+    HDL_SetBinding(&interface, "HASTIME",       20, &dsp_binds.hasTime, HDL_TYPE_BOOL);
+    HDL_SetBinding(&interface, "HOURS",         21, &dsp_binds.hours, HDL_TYPE_I8);
+    HDL_SetBinding(&interface, "MINUTES",       22, &dsp_binds.minutes, HDL_TYPE_I8);
+    
+    HDL_SetBinding(&interface, "YEAR",          23, &dsp_binds.year, HDL_TYPE_I16);
+    HDL_SetBinding(&interface, "MONTH",         24, &dsp_binds.month, HDL_TYPE_I8);
+    HDL_SetBinding(&interface, "DAY",           25, &dsp_binds.day, HDL_TYPE_I8);
+    HDL_SetBinding(&interface, "WEEKDAY",       26, &dsp_binds.weekDay, HDL_TYPE_I8);
+
+
 
 
     // Build page
@@ -272,6 +307,13 @@ static void display_thread(void *arg, void *unused2, void *unused3) {
         update_battery_sprite();
         // Update time
         conf_time_refresh();
+
+        #ifdef CONFIG_ZMK_CONFIG
+        struct zmk_config_field *sens = zmk_config_get(ZMK_CONFIG_KEY_MOUSE_SENSITIVITY);
+        if(sens) {
+            dsp_binds.sensitivity = *(uint8_t*)sens->data;
+        }
+        #endif
 
         if(HDL_Update(&interface, k_uptime_get()) > 0) {
             il0323_hibernate(display);
