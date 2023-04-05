@@ -12,11 +12,9 @@
 #include <drivers/sensor.h>
 #include <logging/log.h>
 #include <drivers/i2c.h>
-#include <init.h>
 #include <device.h>
-#include "iqs5xx.h"
-#include <drivers/sensor.h>
 #include <devicetree.h>
+#include "iqs5xx.h"
 
 // DT_DRV_INST(0);
 LOG_MODULE_REGISTER(azoteq_iqs5xx, CONFIG_ZMK_LOG_LEVEL);

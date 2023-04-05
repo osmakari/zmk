@@ -52,6 +52,9 @@ enum zmk_config_key {
     // Touchpad click type (u8) (0 = normal, 1 = left click on left side, right click on right side)
     ZMK_CONFIG_KEY_TP_CLICK_TYPE =          0x0044,
 
+    // 0x0060 - 0x007F: Display configurations
+    ZMK_CONFIG_KEY_DISPLAY_CODE =           0x0060,
+
     // --------------------------------------------------------------
     // 0x4000 - 0x7FFF: (Recommended) Non-saved fields
     // Fields that do not require saving to NVS, such as time or date

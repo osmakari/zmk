@@ -21,18 +21,12 @@
             tapping-term-ms = <200>;
             bindings = <&mo 2>, <&tog 1>;
         };
-        mouse_scroll: mouse_scroll {
-            compatible = "zmk,behavior-sensor-rotate";
-            label = "mouse_scroll";
-            #sensor-binding-cells = <0>;
-			tap-ms = <50>;
-            bindings = <&mwh SCROLL_UP>, <&mwh SCROLL_DOWN>;
-        };
+
         mouse_sensitivity: mouse_sensitivity {
             compatible = "zmk,behavior-sensor-rotate";
             label = "mouse_sensitivity";
             #sensor-binding-cells = <0>;
-            tap-ms = <50>;
+            tap-ms = <5>;
             bindings = <&msens 8>, <&msens 248>;
         };
     
@@ -58,7 +52,7 @@
 &kp LCTRL   &kp LGUI        &kp LALT    &td1    &kp BSPC 	&kp SPACE 	&kp RET         &kp SPACE       			&kp RALT    							&kp RGUI    &kp K_APP   &kp RCTRL 			&mo 2                                	
 			>;
 
-			sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &mouse_scroll>;
+			sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp DOWN_ARROW UP_ARROW>;
 		};
 
 		arrow_layer {

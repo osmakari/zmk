@@ -11,7 +11,20 @@
 #include <time.h>
 #include <math.h>
 
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+// Central
+#include <zmk/split/bluetooth/central.h>
+
+#elif IS_ENABLED(CONFIG_ZMK_SPLIT)
+// Peripheral
+#include <zmk/split/bluetooth/peripheral.h>
+#endif
+#include <zmk/keymap.h>
+#include <zmk/ble.h>
+
 LOG_MODULE_REGISTER(hdldisp, CONFIG_DISPLAY_LOG_LEVEL);
+
+#define HDL_DATA_MAX_SIZE    1024
 
 // Display device
 static const struct device *display;
@@ -19,6 +32,14 @@ static const struct device *display;
 struct HDL_Interface interface;
 // Default font
 extern const char HDL_FONT[2048];
+// HDL data
+uint8_t HDL_DATA[HDL_DATA_MAX_SIZE];
+// HDL data length
+uint16_t HDL_DATA_LEN = 0;
+// HDL initialized
+uint8_t hdl_initialized = 0;
+// HDL build mutex
+K_MUTEX_DEFINE(hdl_mutex);
 
 enum dsp_view {
     VIEW_MAIN,
@@ -52,6 +73,10 @@ struct {
     int8_t rssi;
 
     uint16_t sensitivity;
+
+    uint8_t layer;
+    uint8_t btProfile;
+    uint8_t splitConnected;
     
     // Time and date
     uint8_t hasTime;
@@ -99,6 +124,37 @@ void conf_time_refresh () {
 void conf_time_updated () {
     _conf_time_last_update = k_uptime_get();
     conf_time_refresh();
+}
+
+// Display received via zmk_control callback
+void conf_display_updated () {
+
+    k_mutex_lock(&hdl_mutex, K_FOREVER);
+
+    struct HDL_Header *hdr = (struct HDL_Header*)HDL_DATA;
+
+    // Get file size from HDL file
+    HDL_DATA_LEN = hdr->fileSize;
+
+    if(HDL_DATA_LEN == 0) {
+        // Set default data
+        memcpy(HDL_DATA, HDL_PAGE_display_right_c, HDL_PAGE_SIZE_display_right_c);
+        HDL_DATA_LEN = HDL_PAGE_SIZE_display_right_c;
+    }
+    
+    
+    // Free earlier interface
+    HDL_Free(&interface);
+
+    HDL_Build(&interface, HDL_DATA, HDL_DATA_LEN);
+
+    if(hdl_initialized) {
+        HDL_ForceUpdate(&interface);
+        il0323_hibernate(display);
+    }
+
+    k_mutex_unlock(&hdl_mutex);
+
 }
 
 // Set sleep view
@@ -215,10 +271,10 @@ void dsp_text (int16_t x, int16_t y, const char *text, uint8_t fontSize) {
 		}
 		
 		for (int py = 0; py < 8; py++) {
-			for (int px = 0; px < 5; px++) {
+			for (int px = 0; px < 6; px++) {
 				if ((HDL_FONT[text[g] * 8 + py] >> (7 - px)) & 1) {
-                    int rx = x + (px + acol * 5) * fontSize;
-                    int ry = y + (py + line * 6) * fontSize;
+                    int rx = x + (px + acol * 6) * fontSize;
+                    int ry = y + (py + line * 8) * fontSize;
 
                     for(int sy = 0; sy < fontSize; sy++) {
                         for(int sx = 0; sx < fontSize; sx++) {
@@ -231,6 +287,40 @@ void dsp_text (int16_t x, int16_t y, const char *text, uint8_t fontSize) {
 		acol++;
 
     }
+}
+
+static void update_display_bindings () {
+    // Update battery
+    dsp_binds.batt_percent = zmk_battery_state_of_charge();
+    update_battery_sprite();
+    // Update time
+    conf_time_refresh();
+
+    #ifdef CONFIG_ZMK_CONFIG
+    struct zmk_config_field *sens = zmk_config_get(ZMK_CONFIG_KEY_MOUSE_SENSITIVITY);
+    if(sens) {
+        dsp_binds.sensitivity = *(uint8_t*)sens->data;
+    }
+    #endif
+
+
+
+    #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    // Central
+    dsp_binds.splitConnected = zmk_split_bt_central_is_connected();
+
+    #elif IS_ENABLED(CONFIG_ZMK_SPLIT)
+    // Peripheral
+    dsp_binds.splitConnected = zmk_split_bt_peripheral_is_connected();
+    
+    #endif
+
+    #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL) || !IS_ENABLED(CONFIG_ZMK_SPLIT)
+    dsp_binds.layer = zmk_keymap_highest_layer_active();
+    dsp_binds.btProfile = zmk_ble_active_profile_index();
+    #endif
+
+    
 }
 
 static void display_thread(void *arg, void *unused2, void *unused3) {
@@ -265,6 +355,10 @@ static void display_thread(void *arg, void *unused2, void *unused3) {
 
     HDL_SetBinding(&interface, "SENSITIVITY",   6, &dsp_binds.sensitivity, HDL_TYPE_I16);
 
+    HDL_SetBinding(&interface, "LAYER",         7, &dsp_binds.layer, HDL_TYPE_I8);
+    HDL_SetBinding(&interface, "BTPROFILE",     8, &dsp_binds.btProfile, HDL_TYPE_I8);
+    HDL_SetBinding(&interface, "SPLITCONNECTED", 9, &dsp_binds.splitConnected, HDL_TYPE_BOOL);
+
     // Time and date
     HDL_SetBinding(&interface, "HASTIME",       20, &dsp_binds.hasTime, HDL_TYPE_BOOL);
     HDL_SetBinding(&interface, "HOURS",         21, &dsp_binds.hours, HDL_TYPE_I8);
@@ -275,16 +369,6 @@ static void display_thread(void *arg, void *unused2, void *unused3) {
     HDL_SetBinding(&interface, "DAY",           25, &dsp_binds.day, HDL_TYPE_I8);
     HDL_SetBinding(&interface, "WEEKDAY",       26, &dsp_binds.weekDay, HDL_TYPE_I8);
 
-
-
-
-    // Build page
-    err = HDL_Build(&interface, HDL_PAGE_display_right_c, HDL_PAGE_SIZE_display_right_c);
-    if(err) {
-        // Error TODO:
-        return;
-    }
-
     // Add preloaded images
     // Preloaded images' id's must have the MSb as 1 (>0x8000)
     // Normal icons
@@ -294,30 +378,28 @@ static void display_thread(void *arg, void *unused2, void *unused3) {
 
     // Set text width and height, used to center text
     interface.textHeight = 6;
-    interface.textWidth = 4;
+    interface.textWidth = 5;
 
     // Set automatic update intervals
     // min: 300ms, max: 30s
     HDL_SetUpdateInterval(&interface, 300, 30000);
 
+    // Load data and build
+    conf_display_updated();
+
+    hdl_initialized = 1;
+
     while(1) {
 
-        // Update battery
-        dsp_binds.batt_percent = zmk_battery_state_of_charge();
-        update_battery_sprite();
-        // Update time
-        conf_time_refresh();
+        update_display_bindings();
 
-        #ifdef CONFIG_ZMK_CONFIG
-        struct zmk_config_field *sens = zmk_config_get(ZMK_CONFIG_KEY_MOUSE_SENSITIVITY);
-        if(sens) {
-            dsp_binds.sensitivity = *(uint8_t*)sens->data;
-        }
-        #endif
+        k_mutex_lock(&hdl_mutex, K_FOREVER);
 
         if(HDL_Update(&interface, k_uptime_get()) > 0) {
             il0323_hibernate(display);
-        } 
+        }
+
+        k_mutex_unlock(&hdl_mutex);
 
         // Sleep for 1sec
         k_msleep(1000);
@@ -328,11 +410,17 @@ static int display_init () {
 
     display = DEVICE_DT_GET_ANY(gooddisplay_il0323n);
 
+    memset(HDL_DATA, 0, sizeof(HDL_DATA));
+
     // Bind timestamp
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#if IS_ENABLED(CONFIG_ZMK_CONFIG)
     if(zmk_config_bind(ZMK_CONFIG_KEY_DATETIME, &conf_time, sizeof(conf_time), false, conf_time_updated, display) == NULL) {
         LOG_ERR("Failed to bind timestamp");
     }
+    if(zmk_config_bind(ZMK_CONFIG_KEY_DISPLAY_CODE, HDL_DATA, sizeof(HDL_DATA), true, conf_display_updated, display) == NULL) {
+        LOG_ERR("Failed to bind display");
+    }
+
 #endif
     if (display == NULL) {
         LOG_ERR("Failed to get il0323n device");

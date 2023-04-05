@@ -49,6 +49,8 @@ struct peripheral_slot {
     uint8_t changed_positions[POSITION_STATE_DATA_LEN];
 };
 
+static bool is_connected = false;
+
 static struct peripheral_slot peripherals[ZMK_BLE_SPLIT_PERIPHERAL_COUNT];
 
 static const struct bt_uuid_128 split_service_uuid = BT_UUID_INIT_128(ZMK_SPLIT_BT_SERVICE_UUID);
@@ -568,6 +570,8 @@ static void split_central_connected(struct bt_conn *conn, uint8_t conn_err) {
 
     LOG_DBG("Connected: %s", log_strdup(addr));
 
+    is_connected = true;
+
     confirm_peripheral_slot_conn(conn);
     split_central_process_connection(conn);
 }
@@ -582,12 +586,16 @@ static void split_central_disconnected(struct bt_conn *conn, uint8_t reason) {
 
     err = release_peripheral_slot_for_conn(conn);
 
+    is_connected = false;
+
     if (err < 0) {
         return;
     }
 
     start_scan();
 }
+
+bool zmk_split_bt_central_is_connected() { return is_connected; }
 
 static struct bt_conn_cb conn_callbacks = {
     .connected = split_central_connected,
