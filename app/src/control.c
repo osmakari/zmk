@@ -109,7 +109,7 @@ int zmk_control_get_config (uint8_t *buffer, uint16_t len) {
     
     struct zmk_control_msg_get_config *resp = _zmk_control_input_buffer;
     resp->key = request->key;
-    resp->size = request->size;
+    resp->size = field->size;
     memcpy(&resp->data, field->data, field->size);
 
     switch (zmk_endpoints_selected()) {

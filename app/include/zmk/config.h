@@ -104,19 +104,24 @@ struct zmk_config_field {
     void *data;
 };
 
+enum zmk_config_layout {
+    ZMK_CONFIG_LAYOUT_UNKNOWN = 0,
+    ZMK_CONFIG_LAYOUT_ISO = 1,
+    ZMK_CONFIG_LAYOUT_ANSI = 2
+};
+
 /**
  * @brief Device info 
  */
 struct __attribute__((packed)) zmk_config_device_info {
     char device_name[32];
-    char manufacturer[32];
-    char product[32];
+    char manufacturer[24];
+    char product[24];
     char serial[32];
     
-    uint8_t init_status;
+    uint8_t layout;
 
     uint8_t layer_count;
-    uint8_t row_count;
     uint8_t key_count;
 };
 

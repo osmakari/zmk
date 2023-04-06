@@ -70,7 +70,9 @@ void activity_work_handler(struct k_work *work) {
 #if IS_ENABLED(CONFIG_ZMK_SLEEP)
     if (inactive_time > MAX_SLEEP_MS && !is_usb_power_present()) {
         // Update display
+        #if IS_ENABLED(CONFIG_ZEPHYR_HDL)
         display_set_sleep();
+        #endif
         k_msleep(10);
         // Put devices in suspend power mode before sleeping
         set_state(ZMK_ACTIVITY_SLEEP);

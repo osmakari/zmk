@@ -324,6 +324,9 @@ void zmk_keymap_updated (struct zmk_config_field *field) {
     
     for(int key = 0; key < ZMK_CONFIG_MAX_REBOUND_KEYS; key++) {
         struct zmk_config_keymap_item *item = &zmk_config_keymap[key];
+        if(item->key == 0xFFFF)
+            continue;
+
         uint8_t layer = item->key & 0x0F;
         uint16_t key = item->key >> 4;
         if(layer >= ZMK_KEYMAP_LAYERS_LEN || key >= ZMK_KEYMAP_LEN)
